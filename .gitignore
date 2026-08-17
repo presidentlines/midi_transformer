@@ -9,3 +9,5 @@ data/
 docs/Rubric*
 data.zip
 artifacts/evaluation
+*.wav
+*.mid
