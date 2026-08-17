@@ -37,8 +37,8 @@ def next_token_loss(logits, targets):
 
 
 def train_one_epoch(model, loader, optimizer, device, log_every=10):
-    if log_every <= 0:
-        raise ValueError("log_every must be positive")
+    if log_every < 0:
+        raise ValueError("log_every must be non-negative")
 
     model.train()
     total_loss = 0.0
@@ -56,7 +56,9 @@ def train_one_epoch(model, loader, optimizer, device, log_every=10):
 
         total_loss += loss.item()
 
-        if batch_number % log_every == 0 or batch_number == len(loader):
+        if log_every > 0 and (
+            batch_number % log_every == 0 or batch_number == len(loader)
+        ):
             elapsed = time.monotonic() - started_at
             seconds_per_batch = elapsed / batch_number
             remaining = seconds_per_batch * (len(loader) - batch_number)
@@ -138,7 +140,12 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--context-length", type=int, default=256)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
-    parser.add_argument("--log-every", type=int, default=10)
+    parser.add_argument(
+        "--log-every",
+        type=int,
+        default=10,
+        help="Print batch progress every N batches; use 0 to disable",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--checkpoint",
