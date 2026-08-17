@@ -31,7 +31,7 @@ uv run python -m src.evaluate --checkpoint artifacts/best_model.pt --generated-d
 ```
 
 This evaluates held-out test loss against the bigram baseline and creates
-paper-ready PNG figures plus `piece_statistics.csv` for the generated songs.
+the training, perplexity, pitch, duration, and piano-roll figures used in the paper.
 
 ## Generate 10 different songs
 

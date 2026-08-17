@@ -11,21 +11,7 @@ from torch.nn import functional as F
 
 from src.data import create_dataloaders, create_datasets
 from src.model import MidiTransformer
-
-
-def choose_device():
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
-
-
-def set_seed(seed):
-    random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
+from src.generate import choose_device, set_seed
 
 
 def next_token_loss(logits, targets):
@@ -120,9 +106,7 @@ def save_checkpoint(path, model, model_config, datasets, epoch, validation_loss)
             "validation_loss": validation_loss,
             "file_splits": {
                 "train": [path.name for path in datasets["train_files"]],
-                "validation": [
-                    path.name for path in datasets["validation_files"]
-                ],
+                "validation": [path.name for path in datasets["validation_files"]],
                 "test": [path.name for path in datasets["test_files"]],
             },
         },
@@ -243,6 +227,7 @@ def main():
             flush=True,
         )
 
+        # if validation loss is good, we save out a model.
         if validation_loss < best_validation_loss:
             best_validation_loss = validation_loss
             save_checkpoint(

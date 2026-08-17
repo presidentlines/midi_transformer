@@ -20,9 +20,7 @@ class MidiTransformer(nn.Module):
         super().__init__()
 
         if embedding_dimension % number_of_heads != 0:
-            raise ValueError(
-                "embedding_dimension must be divisible by number_of_heads"
-            )
+            raise ValueError("embedding_dimension must be divisible by number_of_heads")
 
         self.context_length = context_length
         self.token_embedding = nn.Embedding(

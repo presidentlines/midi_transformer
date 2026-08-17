@@ -12,7 +12,7 @@ from src.model import MidiTransformer
 from src.tokenizer import decode_ids, tokens_to_midi
 
 
-def choose_device():
+def choose_device():  # mps on my mac
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -46,6 +46,7 @@ def load_model(checkpoint_path, device):
     )
 
 
+# wav files are easier to play
 def midi_to_wav(midi, output_path, sample_rate=44_100):
     """Render a simple synthesized WAV file for convenient playback."""
     has_notes = any(instrument.notes for instrument in midi.instruments)
@@ -106,9 +107,19 @@ def generate_token_ids(
             if token.startswith("TIME_")
             and int(token.split("_", maxsplit=1)[1]) >= minimum_time_shift
         ],
-        "PITCH": [value for token, value in token_to_id.items() if token.startswith("PITCH_")],
-        "DURATION": [value for token, value in token_to_id.items() if token.startswith("DURATION_")],
-        "VELOCITY": [value for token, value in token_to_id.items() if token.startswith("VELOCITY_")],
+        "PITCH": [
+            value for token, value in token_to_id.items() if token.startswith("PITCH_")
+        ],
+        "DURATION": [
+            value
+            for token, value in token_to_id.items()
+            if token.startswith("DURATION_")
+        ],
+        "VELOCITY": [
+            value
+            for token, value in token_to_id.items()
+            if token.startswith("VELOCITY_")
+        ],
     }
     grammar_order = ("TIME", "PITCH", "DURATION", "VELOCITY")
     time_zero_id = token_to_id["TIME_0"]
@@ -250,9 +261,7 @@ def main():
         midi = tokens_to_midi(tokens, midi_output)
         wav_output = midi_output.with_suffix(".wav")
         midi_to_wav(midi, wav_output)
-        number_of_notes = sum(
-            len(instrument.notes) for instrument in midi.instruments
-        )
+        number_of_notes = sum(len(instrument.notes) for instrument in midi.instruments)
         duration = midi.get_end_time()
 
         print(
