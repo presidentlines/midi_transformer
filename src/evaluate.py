@@ -494,6 +494,20 @@ def main():
     save_training_plot(args.history, args.output_dir)
     save_perplexity_plot(math.exp(model_loss), math.exp(baseline_loss), args.output_dir)
 
+    if args.generated_dir is not None:
+        sampling = {
+            "source": "existing_files",
+            "directory": str(args.generated_dir),
+            "note": "Generation settings cannot be inferred from MIDI files.",
+        }
+    else:
+        sampling = {
+            "source": "generated_by_evaluator",
+            "temperature": args.temperature,
+            "top_k": args.top_k,
+            "max_tokens": args.max_tokens,
+        }
+
     results = {
         "checkpoint_epoch": checkpoint.get("epoch"),
         "checkpoint_validation_loss": checkpoint.get("validation_loss"),
@@ -501,12 +515,7 @@ def main():
         "transformer_test_perplexity": math.exp(model_loss),
         "bigram_test_loss": baseline_loss,
         "bigram_test_perplexity": math.exp(baseline_loss),
-        "sampling": {
-            "source": "existing_files" if args.generated_dir is not None else "generated_by_evaluator",
-            "temperature": args.temperature,
-            "top_k": args.top_k,
-            "max_tokens": args.max_tokens,
-        },
+        "sampling": sampling,
         "real_test_notes": note_statistics(real_notes),
         "generated_notes": note_statistics(generated_notes),
         "real_test_piece_statistics": real_piece_rows,

@@ -27,7 +27,7 @@ uv run python -m json.tool artifacts/evaluation/results.json
 ## Make paper plots from the 10 selected songs
 
 ```bash
-uv run python -m src.evaluate --checkpoint artifacts/best_model.pt --generated-dir artifacts/generated/many --output-dir artifacts/evaluation --temperature .7 --top-k 10 --max-tokens 256
+uv run python -m src.evaluate --checkpoint artifacts/best_model.pt --generated-dir artifacts/generated/many --output-dir artifacts/evaluation
 ```
 
 This evaluates held-out test loss against the bigram baseline and creates
