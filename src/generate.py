@@ -71,6 +71,7 @@ def generate_token_ids(
     model,
     token_to_id,
     max_tokens=512,
+    min_tokens=0,
     temperature=0.9,
     top_k=20,
     device=torch.device("cpu"),
@@ -78,6 +79,8 @@ def generate_token_ids(
     """Autoregressively sample token IDs beginning with BOS."""
     if max_tokens <= 0:
         raise ValueError("max_tokens must be positive")
+    if min_tokens < 0 or min_tokens > max_tokens:
+        raise ValueError("min_tokens must be between 0 and max_tokens")
     if temperature <= 0:
         raise ValueError("temperature must be positive")
     if top_k <= 0:
@@ -90,10 +93,12 @@ def generate_token_ids(
     )
     eos_id = token_to_id["EOS"]
 
-    for _ in range(max_tokens):
+    for token_number in range(max_tokens):
         # The model can only attend to its configured context length.
         context = generated[:, -model.context_length :]
         next_token_logits = model(context)[:, -1, :] / temperature
+        if token_number < min_tokens:
+            next_token_logits[:, eos_id] = -torch.inf
 
         number_of_candidates = min(top_k, next_token_logits.size(-1))
         top_values, top_indices = torch.topk(
@@ -125,6 +130,12 @@ def parse_args():
         default=Path("artifacts/generated/sample.mid"),
     )
     parser.add_argument("--max-tokens", type=int, default=512)
+    parser.add_argument(
+        "--min-tokens",
+        type=int,
+        default=128,
+        help="Do not allow EOS before this many tokens are generated",
+    )
     parser.add_argument("--temperature", type=float, default=0.9)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
@@ -168,6 +179,7 @@ def main():
             model,
             token_to_id,
             max_tokens=args.max_tokens,
+            min_tokens=args.min_tokens,
             temperature=args.temperature,
             top_k=args.top_k,
             device=device,
