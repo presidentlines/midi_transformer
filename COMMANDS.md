@@ -9,7 +9,7 @@ uv run python -m src.train --epochs 10 --log-every 0
 ## Generate music
 
 ```bash
-uv run python -m src.generate --checkpoint artifacts/best_model.pt --output artifacts/generated/sample.mid --seed 42
+uv run python -m src.generate --checkpoint artifacts/best_model.pt --output artifacts/generated/sample.mid --samples 5 --max-tokens 256 --temperature 0.7 --top-k 10 --seed 42
 ```
 
 ## Evaluate the model

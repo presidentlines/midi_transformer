@@ -128,6 +128,12 @@ def parse_args():
     parser.add_argument("--temperature", type=float, default=0.9)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=1,
+        help="Number of samples to generate using consecutive seeds",
+    )
     return parser.parse_args()
 
 
@@ -138,33 +144,48 @@ def main():
             f"Checkpoint not found: {args.checkpoint}. Train the model first with "
             "`uv run python -m src.train --epochs 10`."
         )
+    if args.samples <= 0:
+        raise ValueError("samples must be positive")
 
-    set_seed(args.seed)
     device = choose_device()
     print(f"Using device: {device}")
 
     model, token_to_id, id_to_token = load_model(args.checkpoint, device)
-    token_ids = generate_token_ids(
-        model,
-        token_to_id,
-        max_tokens=args.max_tokens,
-        temperature=args.temperature,
-        top_k=args.top_k,
-        device=device,
-    )
-    tokens = decode_ids(token_ids, id_to_token)
-
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    midi = tokens_to_midi(tokens, args.output)
-    wav_output = args.output.with_suffix(".wav")
-    midi_to_wav(midi, wav_output)
-    number_of_notes = sum(
-        len(instrument.notes) for instrument in midi.instruments
-    )
 
-    print(f"Generated {len(tokens)} tokens and {number_of_notes} valid notes")
-    print(f"Saved MIDI to {args.output}")
-    print(f"Saved WAV to {wav_output}")
+    for sample_number in range(args.samples):
+        seed = args.seed + sample_number
+        set_seed(seed)
+
+        if args.samples == 1:
+            midi_output = args.output
+        else:
+            midi_output = args.output.with_name(
+                f"{args.output.stem}_seed_{seed}{args.output.suffix}"
+            )
+
+        token_ids = generate_token_ids(
+            model,
+            token_to_id,
+            max_tokens=args.max_tokens,
+            temperature=args.temperature,
+            top_k=args.top_k,
+            device=device,
+        )
+        tokens = decode_ids(token_ids, id_to_token)
+        midi = tokens_to_midi(tokens, midi_output)
+        wav_output = midi_output.with_suffix(".wav")
+        midi_to_wav(midi, wav_output)
+        number_of_notes = sum(
+            len(instrument.notes) for instrument in midi.instruments
+        )
+
+        print(
+            f"Seed {seed}: generated {len(tokens)} tokens and "
+            f"{number_of_notes} valid notes"
+        )
+        print(f"  MIDI: {midi_output}")
+        print(f"  WAV:  {wav_output}")
 
 
 if __name__ == "__main__":
