@@ -23,3 +23,17 @@ uv run python -m src.evaluate --checkpoint artifacts/best_model.pt --output-dir 
 ```bash
 uv run python -m json.tool artifacts/evaluation/results.json
 ```
+
+## Generate 10 different songs
+
+```bash
+uv run python -m src.generate --checkpoint artifacts/best_model.pt --output artifacts/generated/many/candidates.mid --seed 42 --samples 10 --max-tokens 256 --temperature .7 --top-k 10
+```
+
+# play all the songs in a folder
+```bash
+for file in artifacts/generated/many/*.wav; do
+    echo "$file"
+    afplay "$file"
+done
+```
