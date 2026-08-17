@@ -132,7 +132,7 @@ src/tokenizer.py       MIDI tokenization and reconstruction
 src/model.py           causal transformer model
 src/train.py           sanity check and full training loop
 src/generate.py        autoregressive MIDI generation
-src/evaluate.py        evaluation work in progress
+src/evaluate.py        test metrics, baseline, samples, and plots
 src/viz.py             exploratory visualization helpers
 ```
 
@@ -144,10 +144,16 @@ src/viz.py             exploratory visualization helpers
 - Timing, duration, and velocity are quantized and therefore lose precision.
 - Generated token order is not constrained; malformed note groups are skipped
   when converting output to MIDI.
-- Quantitative evaluation and baseline comparisons are still in progress.
+- Musical quality still requires a qualitative listening assessment.
 
-## Planned evaluation
+## Evaluation
 
-The final evaluation will include held-out test loss and perplexity, valid token
-grammar rate, comparisons of real and generated pitch and duration
-distributions, generated MIDI examples, and a simple statistical baseline.
+After training, run the held-out evaluation with:
+
+```bash
+uv run python -m src.evaluate
+```
+
+This saves test loss and perplexity, a bigram baseline, generated-token grammar
+rates, note statistics, generated MIDI examples, and pitch and duration plots
+under `artifacts/evaluation/`.
