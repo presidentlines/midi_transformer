@@ -220,7 +220,6 @@ def main():
 
     for epoch in range(1, args.epochs + 1):
         epoch_started_at = time.monotonic()
-        print(f"Epoch {epoch}/{args.epochs}", flush=True)
         training_loss = train_one_epoch(
             model,
             loaders["train"],
@@ -228,7 +227,6 @@ def main():
             device,
             log_every=args.log_every,
         )
-        print("  validating...", flush=True)
         validation_loss = evaluate(model, loaders["validation"], device)
         history.append(
             {
