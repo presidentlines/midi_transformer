@@ -34,20 +34,6 @@ def load_model(checkpoint_path, device):
         map_location=device,
         weights_only=True,
     )
-
-
-def midi_to_wav(midi, output_path, sample_rate=44_100):
-    """Render a simple synthesized WAV file for convenient playback."""
-    audio = midi.synthesize(fs=sample_rate)
-    peak = float(np.max(np.abs(audio))) if audio.size else 0.0
-    if peak > 0:
-        audio = audio / peak
-
-    wavfile.write(
-        output_path,
-        sample_rate,
-        (audio * np.iinfo(np.int16).max).astype(np.int16),
-    )
     model = MidiTransformer(**checkpoint["model_config"])
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
@@ -57,6 +43,26 @@ def midi_to_wav(midi, output_path, sample_rate=44_100):
         model,
         checkpoint["token_to_id"],
         checkpoint["id_to_token"],
+    )
+
+
+def midi_to_wav(midi, output_path, sample_rate=44_100):
+    """Render a simple synthesized WAV file for convenient playback."""
+    has_notes = any(instrument.notes for instrument in midi.instruments)
+    if has_notes:
+        audio = midi.synthesize(fs=sample_rate)
+    else:
+        audio = np.zeros(sample_rate, dtype=np.float64)
+
+    audio = np.nan_to_num(audio)
+    peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+    if peak > 0:
+        audio = audio / peak
+
+    wavfile.write(
+        output_path,
+        sample_rate,
+        (audio * np.iinfo(np.int16).max).astype(np.int16),
     )
 
 

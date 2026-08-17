@@ -17,6 +17,7 @@ dependencies = [
     "pillow>=12.2.0",
     "pretty-midi>=0.2.11.post0",
     "scikit-learn>=1.9.0",
+    "scipy>=1.18.0",
     "sympy>=1.14.0",
     "tabulate>=0.10.0",
     "tensorboard>=2.20.0",
