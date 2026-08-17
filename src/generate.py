@@ -76,6 +76,7 @@ def generate_token_ids(
     top_k=20,
     constrain_grammar=False,
     minimum_time_shift=0,
+    max_simultaneous_notes=None,
     device=torch.device("cpu"),
 ):
     """Autoregressively sample token IDs beginning with BOS."""
@@ -89,6 +90,8 @@ def generate_token_ids(
         raise ValueError("top_k must be positive")
     if minimum_time_shift < 0 or minimum_time_shift > 64:
         raise ValueError("minimum_time_shift must be between 0 and 64")
+    if max_simultaneous_notes is not None and max_simultaneous_notes <= 0:
+        raise ValueError("max_simultaneous_notes must be positive")
 
     generated = torch.tensor(
         [[token_to_id["BOS"]]],
@@ -108,6 +111,8 @@ def generate_token_ids(
         "VELOCITY": [value for token, value in token_to_id.items() if token.startswith("VELOCITY_")],
     }
     grammar_order = ("TIME", "PITCH", "DURATION", "VELOCITY")
+    time_zero_id = token_to_id["TIME_0"]
+    simultaneous_notes = 0
 
     for token_number in range(max_tokens):
         # The model can only attend to its configured context length.
@@ -115,6 +120,14 @@ def generate_token_ids(
         next_token_logits = model(context)[:, -1, :] / temperature
         if constrain_grammar:
             allowed_ids = grammar_token_ids[grammar_order[token_number % 4]].copy()
+            if (
+                token_number % 4 == 0
+                and max_simultaneous_notes is not None
+                and simultaneous_notes >= max_simultaneous_notes
+            ):
+                allowed_ids = [
+                    token_id for token_id in allowed_ids if token_id != time_zero_id
+                ]
             if token_number % 4 == 0 and token_number >= min_tokens:
                 allowed_ids.append(eos_id)
             masked_logits = torch.full_like(next_token_logits, -torch.inf)
@@ -132,6 +145,12 @@ def generate_token_ids(
         probabilities = torch.softmax(top_values, dim=-1)
         sampled_position = torch.multinomial(probabilities, num_samples=1)
         next_token = top_indices.gather(-1, sampled_position)
+
+        if constrain_grammar and token_number % 4 == 0:
+            if next_token.item() == time_zero_id:
+                simultaneous_notes += 1
+            elif next_token.item() != eos_id:
+                simultaneous_notes = 1
 
         generated = torch.cat((generated, next_token), dim=1)
         if next_token.item() == eos_id:
@@ -171,6 +190,12 @@ def parse_args():
         type=int,
         default=0,
         help="Minimum TIME value during constrained generation; 1 equals 0.25 seconds",
+    )
+    parser.add_argument(
+        "--max-simultaneous-notes",
+        type=int,
+        default=None,
+        help="Maximum notes allowed at one start time during constrained generation",
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
@@ -218,6 +243,7 @@ def main():
             top_k=args.top_k,
             constrain_grammar=args.constrain_grammar,
             minimum_time_shift=args.min_time_shift,
+            max_simultaneous_notes=args.max_simultaneous_notes,
             device=device,
         )
         tokens = decode_ids(token_ids, id_to_token)
