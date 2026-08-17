@@ -1,4 +1,4 @@
-"""Evaluate the trained transformer and compare real and generated MIDI."""
+"""Evaluate the transformer and compare real and generated MIDI."""
 
 import argparse
 import json
@@ -87,19 +87,6 @@ def load_notes(paths):
             if not instrument.is_drum:
                 notes.extend(instrument.notes)
     return notes
-
-
-def note_statistics(notes):
-    pitches = np.array([note.pitch for note in notes])
-    durations = np.array([note.end - note.start for note in notes])
-    return {
-        "number_of_notes": len(notes),
-        "mean_pitch": float(pitches.mean()),
-        "pitch_standard_deviation": float(pitches.std()),
-        "mean_duration": float(durations.mean()),
-        "unique_pitches": int(np.unique(pitches).size),
-        "pitch_range": [int(pitches.min()), int(pitches.max())],
-    }
 
 
 def plot_training(history_path, output_dir):
@@ -248,8 +235,6 @@ def main():
         "transformer_test_perplexity": transformer_perplexity,
         "bigram_test_loss": baseline_loss,
         "bigram_test_perplexity": baseline_perplexity,
-        "real_test_notes": note_statistics(real_notes),
-        "generated_notes": note_statistics(generated_notes),
         "generated_files": [path.name for path in generated_paths],
     }
     (args.output_dir / "results.json").write_text(json.dumps(results, indent=2) + "\n")

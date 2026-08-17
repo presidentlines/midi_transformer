@@ -11,3 +11,5 @@ data.zip
 artifacts/evaluation
 *.wav
 *.mid
+docs/research
+.DS_Store

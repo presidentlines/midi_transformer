@@ -3,9 +3,6 @@
 The representation uses four tokens per note::
 
     TIME_<shift> PITCH_<pitch> DURATION_<duration> VELOCITY_<bucket>
-
-Times and durations are quantized to quarter-second steps. This deliberately
-keeps the vocabulary small and fixed, at the cost of some timing precision.
 """
 
 from pathlib import Path
