@@ -4,7 +4,9 @@ import argparse
 import random
 from pathlib import Path
 
+import numpy as np
 import torch
+from scipy.io import wavfile
 
 from src.model import MidiTransformer
 from src.tokenizer import decode_ids, tokens_to_midi
@@ -31,6 +33,20 @@ def load_model(checkpoint_path, device):
         checkpoint_path,
         map_location=device,
         weights_only=True,
+    )
+
+
+def midi_to_wav(midi, output_path, sample_rate=44_100):
+    """Render a simple synthesized WAV file for convenient playback."""
+    audio = midi.synthesize(fs=sample_rate)
+    peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+    if peak > 0:
+        audio = audio / peak
+
+    wavfile.write(
+        output_path,
+        sample_rate,
+        (audio * np.iinfo(np.int16).max).astype(np.int16),
     )
     model = MidiTransformer(**checkpoint["model_config"])
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -134,12 +150,15 @@ def main():
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     midi = tokens_to_midi(tokens, args.output)
+    wav_output = args.output.with_suffix(".wav")
+    midi_to_wav(midi, wav_output)
     number_of_notes = sum(
         len(instrument.notes) for instrument in midi.instruments
     )
 
     print(f"Generated {len(tokens)} tokens and {number_of_notes} valid notes")
     print(f"Saved MIDI to {args.output}")
+    print(f"Saved WAV to {wav_output}")
 
 
 if __name__ == "__main__":
