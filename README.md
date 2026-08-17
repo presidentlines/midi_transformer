@@ -6,43 +6,8 @@ that describe timing, pitch, duration, and velocity.
 
 The project uses a collection of 32 classical MIDI files containing music by
 Bach, Beethoven, and other composers. MIDI is used instead of audio because it
-provides structured note and timing information directly.
+provides structured note and timing information directly. Music files come from this kaggle dataset: https://www.kaggle.com/datasets/soumikrakshit/classical-music-midi
 
-## Project pipeline
-
-```text
-MIDI files
-    -> quantized event tokens
-    -> song-level train/validation/test split
-    -> causal transformer
-    -> generated event tokens
-    -> generated MIDI file
-```
-
-Each note is represented by four tokens:
-
-```text
-TIME_<shift> PITCH_<pitch> DURATION_<duration> VELOCITY_<bucket>
-```
-
-Timing and duration are quantized into 0.25-second steps. The fixed vocabulary
-contains 268 tokens, including `BOS`, `EOS`, and `PAD`.
-
-## Model
-
-The default model is a small causal transformer designed for the limited
-dataset size:
-
-- 256-token context length
-- 128-dimensional embeddings
-- 3 transformer layers
-- 4 attention heads
-- 512-dimensional feed-forward layers
-- 0.1 dropout
-- approximately 697,000 parameters
-
-The causal attention mask prevents the model from examining future tokens while
-predicting the next token.
 
 ## Setup
 
@@ -69,10 +34,7 @@ Before a full experiment, verify that the model can overfit one fixed batch:
 uv run python -m src.train --overfit-one-batch
 ```
 
-The loss should decrease substantially. This checks the tokenizer, dataset,
-causal mask, loss calculation, backpropagation, and optimizer. It does not
-produce a useful final checkpoint.
-
+The loss should decrease substantially. 
 ## Train the model
 
 Run the full training experiment with:
@@ -85,7 +47,7 @@ The 32 songs are split by file into 24 training, 4 validation, and 4 test
 pieces. Splitting by song prevents windows from the same composition from
 appearing in both training and evaluation data.
 
-Training saves:
+Training saves out two things:
 
 ```text
 artifacts/best_model.pt
@@ -121,31 +83,6 @@ uv run python -m src.generate --seed 44 \
   --output artifacts/generated/sample_44.mid
 ```
 
-## Repository structure
-
-```text
-data/                 MIDI training data
-docs/                 project rubric and paper planning documents
-notebooks/            exploratory data analysis
-src/data.py            MIDI loading and PyTorch datasets
-src/tokenizer.py       MIDI tokenization and reconstruction
-src/model.py           causal transformer model
-src/train.py           sanity check and full training loop
-src/generate.py        autoregressive MIDI generation
-src/evaluate.py        test metrics, baseline, samples, and plots
-src/viz.py             exploratory visualization helpers
-```
-
-## Current limitations
-
-- The dataset contains only 32 compositions.
-- Timing is measured in seconds rather than musical beats, making the
-  representation sensitive to tempo.
-- Timing, duration, and velocity are quantized and therefore lose precision.
-- Generated token order is not constrained; malformed note groups are skipped
-  when converting output to MIDI.
-- Musical quality still requires a qualitative listening assessment.
-
 ## Evaluation
 
 After training, run the held-out evaluation with:
@@ -155,5 +92,5 @@ uv run python -m src.evaluate
 ```
 
 This saves test loss and perplexity, a bigram baseline, generated-token grammar
-rates, note statistics, generated MIDI examples, and pitch and duration plots
+rates, statistics, generated MIDI examples, and plots
 under `artifacts/evaluation/`.
