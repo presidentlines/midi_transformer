@@ -74,6 +74,7 @@ def generate_token_ids(
     min_tokens=0,
     temperature=0.9,
     top_k=20,
+    constrain_grammar=False,
     device=torch.device("cpu"),
 ):
     """Autoregressively sample token IDs beginning with BOS."""
@@ -92,12 +93,26 @@ def generate_token_ids(
         device=device,
     )
     eos_id = token_to_id["EOS"]
+    grammar_token_ids = {
+        "TIME": [value for token, value in token_to_id.items() if token.startswith("TIME_")],
+        "PITCH": [value for token, value in token_to_id.items() if token.startswith("PITCH_")],
+        "DURATION": [value for token, value in token_to_id.items() if token.startswith("DURATION_")],
+        "VELOCITY": [value for token, value in token_to_id.items() if token.startswith("VELOCITY_")],
+    }
+    grammar_order = ("TIME", "PITCH", "DURATION", "VELOCITY")
 
     for token_number in range(max_tokens):
         # The model can only attend to its configured context length.
         context = generated[:, -model.context_length :]
         next_token_logits = model(context)[:, -1, :] / temperature
-        if token_number < min_tokens:
+        if constrain_grammar:
+            allowed_ids = grammar_token_ids[grammar_order[token_number % 4]].copy()
+            if token_number % 4 == 0 and token_number >= min_tokens:
+                allowed_ids.append(eos_id)
+            masked_logits = torch.full_like(next_token_logits, -torch.inf)
+            masked_logits[:, allowed_ids] = next_token_logits[:, allowed_ids]
+            next_token_logits = masked_logits
+        elif token_number < min_tokens:
             next_token_logits[:, eos_id] = -torch.inf
 
         number_of_candidates = min(top_k, next_token_logits.size(-1))
@@ -138,6 +153,11 @@ def parse_args():
     )
     parser.add_argument("--temperature", type=float, default=0.9)
     parser.add_argument("--top-k", type=int, default=20)
+    parser.add_argument(
+        "--constrain-grammar",
+        action="store_true",
+        help="Only sample tokens valid in TIME/PITCH/DURATION/VELOCITY order",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--samples",
@@ -182,6 +202,7 @@ def main():
             min_tokens=args.min_tokens,
             temperature=args.temperature,
             top_k=args.top_k,
+            constrain_grammar=args.constrain_grammar,
             device=device,
         )
         tokens = decode_ids(token_ids, id_to_token)
