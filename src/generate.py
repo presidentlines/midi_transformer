@@ -75,6 +75,7 @@ def generate_token_ids(
     temperature=0.9,
     top_k=20,
     constrain_grammar=False,
+    minimum_time_shift=0,
     device=torch.device("cpu"),
 ):
     """Autoregressively sample token IDs beginning with BOS."""
@@ -86,6 +87,8 @@ def generate_token_ids(
         raise ValueError("temperature must be positive")
     if top_k <= 0:
         raise ValueError("top_k must be positive")
+    if minimum_time_shift < 0 or minimum_time_shift > 64:
+        raise ValueError("minimum_time_shift must be between 0 and 64")
 
     generated = torch.tensor(
         [[token_to_id["BOS"]]],
@@ -94,7 +97,12 @@ def generate_token_ids(
     )
     eos_id = token_to_id["EOS"]
     grammar_token_ids = {
-        "TIME": [value for token, value in token_to_id.items() if token.startswith("TIME_")],
+        "TIME": [
+            value
+            for token, value in token_to_id.items()
+            if token.startswith("TIME_")
+            and int(token.split("_", maxsplit=1)[1]) >= minimum_time_shift
+        ],
         "PITCH": [value for token, value in token_to_id.items() if token.startswith("PITCH_")],
         "DURATION": [value for token, value in token_to_id.items() if token.startswith("DURATION_")],
         "VELOCITY": [value for token, value in token_to_id.items() if token.startswith("VELOCITY_")],
@@ -158,6 +166,12 @@ def parse_args():
         action="store_true",
         help="Only sample tokens valid in TIME/PITCH/DURATION/VELOCITY order",
     )
+    parser.add_argument(
+        "--min-time-shift",
+        type=int,
+        default=0,
+        help="Minimum TIME value during constrained generation; 1 equals 0.25 seconds",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--samples",
@@ -203,6 +217,7 @@ def main():
             temperature=args.temperature,
             top_k=args.top_k,
             constrain_grammar=args.constrain_grammar,
+            minimum_time_shift=args.min_time_shift,
             device=device,
         )
         tokens = decode_ids(token_ids, id_to_token)
@@ -212,10 +227,11 @@ def main():
         number_of_notes = sum(
             len(instrument.notes) for instrument in midi.instruments
         )
+        duration = midi.get_end_time()
 
         print(
             f"Seed {seed}: generated {len(tokens)} tokens and "
-            f"{number_of_notes} valid notes"
+            f"{number_of_notes} valid notes ({duration:.2f} seconds)"
         )
         print(f"  MIDI: {midi_output}")
         print(f"  WAV:  {wav_output}")
