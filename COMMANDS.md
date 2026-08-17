@@ -24,10 +24,19 @@ uv run python -m src.evaluate --checkpoint artifacts/best_model.pt --output-dir 
 uv run python -m json.tool artifacts/evaluation/results.json
 ```
 
+## Make paper plots from the 10 selected songs
+
+```bash
+uv run python -m src.evaluate --checkpoint artifacts/best_model.pt --generated-dir artifacts/generated/many --output-dir artifacts/evaluation --temperature .7 --top-k 10 --max-tokens 256
+```
+
+This evaluates held-out test loss against the bigram baseline and creates
+paper-ready PNG figures plus `piece_statistics.csv` for the generated songs.
+
 ## Generate 10 different songs
 
 ```bash
-uv run python -m src.generate --checkpoint artifacts/best_model.pt --output artifacts/generated/many/candidates.mid --seed 42 --samples 10 --max-tokens 256 --temperature .7 --top-k 10
+uv run python -m src.generate --checkpoint artifacts/best_model.pt --output artifacts/generated/many/candidates.mid --seed 42 --samples 10 --max-tokens 256 --temperature .7 --top-k 10 --constrain-grammar --max-simultaneous-notes 4
 ```
 
 # play all the songs in a folder
